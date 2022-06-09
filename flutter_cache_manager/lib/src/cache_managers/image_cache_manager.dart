@@ -57,6 +57,7 @@ mixin ImageCacheManager on BaseCacheManager {
         withProgress,
         maxWidth: maxWidth,
         maxHeight: maxHeight,
+        customDecoder: customDecoder,
       ).asBroadcastStream();
       _runningResizes[resizedKey] = runningResize;
     }
