@@ -6,7 +6,7 @@ import 'package:file/file.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 
-typedef CustomDecoder = ImageProvider Function(File file);
+typedef CustomDecoder = Future<ImageProvider> Function(File file);
 
 const supportedFileNames = ['jpg', 'jpeg', 'png', 'tga', 'cur', 'ico'];
 mixin ImageCacheManager on BaseCacheManager {
@@ -160,9 +160,10 @@ Future<ui.Image> _decodeImage(File file,
     {int? width,
     int? height,
     CustomDecoder? customDecoder,
-    bool allowUpscaling = false}) {
+    bool allowUpscaling = false}) async {
   var shouldResize = width != null || height != null;
-  var fileImage = customDecoder != null ? customDecoder(file) : FileImage(file);
+  var fileImage =
+      customDecoder != null ? await customDecoder(file) : FileImage(file);
   final image = shouldResize
       ? ResizeImage(fileImage,
           width: width, height: height, allowUpscaling: allowUpscaling)
