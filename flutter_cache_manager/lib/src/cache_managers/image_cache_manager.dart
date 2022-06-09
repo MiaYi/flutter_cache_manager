@@ -6,6 +6,8 @@ import 'package:file/file.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 
+typedef CustomDecoderCallback = ImageProvider Function(File file);
+
 const supportedFileNames = ['jpg', 'jpeg', 'png', 'tga', 'cur', 'ico'];
 mixin ImageCacheManager on BaseCacheManager {
   /// Returns a resized image file to fit within maxHeight and maxWidth. It
@@ -24,6 +26,7 @@ mixin ImageCacheManager on BaseCacheManager {
     bool withProgress = false,
     int? maxHeight,
     int? maxWidth,
+    CustomDecoderCallback? customDecoder,
   }) async* {
     if (maxHeight == null && maxWidth == null) {
       yield* getFileStream(url,
@@ -68,14 +71,16 @@ mixin ImageCacheManager on BaseCacheManager {
     String key,
     int? maxWidth,
     int? maxHeight,
+    CustomDecoderCallback? customDecoder,
   ) async {
     var originalFileName = originalFile.file.path;
     var fileExtension = originalFileName.split('.').last;
-    if (!supportedFileNames.contains(fileExtension)) {
+    if (customDecoder == null && !supportedFileNames.contains(fileExtension)) {
       return originalFile;
     }
 
-    var image = await _decodeImage(originalFile.file);
+    var image =
+        await _decodeImage(originalFile.file, customDecoder: customDecoder);
 
     var shouldResize = maxWidth != null
         ? image.width > maxWidth
@@ -93,7 +98,10 @@ mixin ImageCacheManager on BaseCacheManager {
     }
 
     var resized = await _decodeImage(originalFile.file,
-        width: maxWidth, height: maxHeight, allowUpscaling: false);
+        customDecoder: customDecoder,
+        width: maxWidth,
+        height: maxHeight,
+        allowUpscaling: false);
     var resizedFile =
         (await resized.toByteData(format: ui.ImageByteFormat.png))!
             .buffer
@@ -124,6 +132,7 @@ mixin ImageCacheManager on BaseCacheManager {
     bool withProgress, {
     int? maxWidth,
     int? maxHeight,
+    CustomDecoderCallback? customDecoder,
   }) async* {
     await for (var response in getFileStream(
       url,
@@ -140,6 +149,7 @@ mixin ImageCacheManager on BaseCacheManager {
           resizedKey,
           maxWidth,
           maxHeight,
+          customDecoder,
         );
       }
     }
@@ -147,9 +157,12 @@ mixin ImageCacheManager on BaseCacheManager {
 }
 
 Future<ui.Image> _decodeImage(File file,
-    {int? width, int? height, bool allowUpscaling = false}) {
+    {int? width,
+    int? height,
+    CustomDecoderCallback? customDecoder,
+    bool allowUpscaling = false}) {
   var shouldResize = width != null || height != null;
-  var fileImage = FileImage(file);
+  var fileImage = customDecoder != null ? customDecoder(file) : FileImage(file);
   final image = shouldResize
       ? ResizeImage(fileImage,
           width: width, height: height, allowUpscaling: allowUpscaling)
