@@ -6,7 +6,7 @@ import 'package:file/file.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 
-typedef CustomDecoderCallback = ImageProvider Function(File file);
+typedef CustomDecoder = ImageProvider Function(File file);
 
 const supportedFileNames = ['jpg', 'jpeg', 'png', 'tga', 'cur', 'ico'];
 mixin ImageCacheManager on BaseCacheManager {
@@ -26,7 +26,7 @@ mixin ImageCacheManager on BaseCacheManager {
     bool withProgress = false,
     int? maxHeight,
     int? maxWidth,
-    CustomDecoderCallback? customDecoder,
+    CustomDecoder? customDecoder,
   }) async* {
     if (maxHeight == null && maxWidth == null) {
       yield* getFileStream(url,
@@ -71,7 +71,7 @@ mixin ImageCacheManager on BaseCacheManager {
     String key,
     int? maxWidth,
     int? maxHeight,
-    CustomDecoderCallback? customDecoder,
+    CustomDecoder? customDecoder,
   ) async {
     var originalFileName = originalFile.file.path;
     var fileExtension = originalFileName.split('.').last;
@@ -132,7 +132,7 @@ mixin ImageCacheManager on BaseCacheManager {
     bool withProgress, {
     int? maxWidth,
     int? maxHeight,
-    CustomDecoderCallback? customDecoder,
+    CustomDecoder? customDecoder,
   }) async* {
     await for (var response in getFileStream(
       url,
@@ -159,7 +159,7 @@ mixin ImageCacheManager on BaseCacheManager {
 Future<ui.Image> _decodeImage(File file,
     {int? width,
     int? height,
-    CustomDecoderCallback? customDecoder,
+    CustomDecoder? customDecoder,
     bool allowUpscaling = false}) {
   var shouldResize = width != null || height != null;
   var fileImage = customDecoder != null ? customDecoder(file) : FileImage(file);
