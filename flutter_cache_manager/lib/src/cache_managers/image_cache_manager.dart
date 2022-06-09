@@ -105,7 +105,7 @@ mixin ImageCacheManager on BaseCacheManager {
       resizedFile,
       key: key,
       maxAge: maxAge,
-      fileExtension: fileExtension,
+      fileExtension: "png",
     );
 
     return FileInfo(
