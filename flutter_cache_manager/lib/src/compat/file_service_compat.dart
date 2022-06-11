@@ -73,4 +73,7 @@ class CompatFileServiceGetResponse implements FileServiceResponse {
 
   @override
   int get statusCode => legacyResponse.statusCode as int;
+
+  @override
+  String? get contentType => _header(HttpHeaders.contentTypeHeader);
 }

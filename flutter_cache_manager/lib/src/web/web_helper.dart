@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:collection';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:clock/clock.dart';
@@ -147,6 +148,12 @@ class WebHelper {
     final file = await _store.fileSystem.createFile(
       newCacheObject.relativePath,
     );
+    if (cacheObject.key.startsWith("img_") &&
+        response.contentType?.startsWith("image") != true) {
+      final str = await file.readAsString();
+      final bytes = base64Decode(str);
+      await file.writeAsBytes(bytes);
+    }
     yield FileInfo(
       file,
       FileSource.Online,
