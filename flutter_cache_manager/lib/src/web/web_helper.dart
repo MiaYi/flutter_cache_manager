@@ -2,10 +2,12 @@ import 'dart:async';
 import 'dart:collection';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:clock/clock.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
+import 'package:flutter_cache_manager/image_size_data.dart';
 import 'package:flutter_cache_manager/src/cache_store.dart';
 import 'package:flutter_cache_manager/src/storage/cache_object.dart';
 import 'package:flutter_cache_manager/src/web/queue_item.dart';
@@ -148,12 +150,6 @@ class WebHelper {
     final file = await _store.fileSystem.createFile(
       newCacheObject.relativePath,
     );
-    if (cacheObject.key.startsWith("img_") &&
-        response.contentType?.startsWith("image") != true) {
-      final str = await file.readAsString();
-      final bytes = base64Decode(str);
-      await file.writeAsBytes(bytes);
-    }
     yield FileInfo(
       file,
       FileSource.Online,
@@ -206,6 +202,16 @@ class WebHelper {
         receivedBytesResultController.add(receivedBytes);
         return s;
       }).pipe(sink);
+      if (cacheObject.key.startsWith("img_")) {
+        Uint8List bytes = await file.readAsBytes();
+        try {
+          ImageSizeData.fromBytes(bytes);
+        } catch (_) {
+          final str = utf8.decode(bytes);
+          bytes = base64Decode(str);
+        }
+        await file.writeAsBytes(bytes);
+      }
     } catch (e, stacktrace) {
       receivedBytesResultController.addError(e, stacktrace);
     }
