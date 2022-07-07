@@ -31,6 +31,23 @@ abstract class ImageSizeData {
   })  : assert(width >= 0),
         assert(height >= 0);
 
+  static bool isImage(Uint8List bytes) {
+    if (bytes.isEmpty) {
+      return false;
+    } else if (PngImageSizeData.matches(bytes)) {
+      return true;
+    } else if (GifImageSizeData.matches(bytes)) {
+      return true;
+    } else if (JpegImageSizeData.matches(bytes)) {
+      return true;
+    } else if (WebPImageSizeData.matches(bytes)) {
+      return true;
+    } else if (BmpImageSizeData.matches(bytes)) {
+      return true;
+    }
+    return false;
+  }
+
   /// Creates an appropriate [ImageSizeData] for the source `bytes`, if possible.
   ///
   /// Only supports image formats supported by Flutter.
@@ -127,7 +144,7 @@ class GifImageSizeData extends ImageSizeData {
 ///
 /// This library does not support JPEG2000 images.
 class JpegImageSizeData extends ImageSizeData {
-  JpegImageSizeData._({required int width,required int height})
+  JpegImageSizeData._({required int width, required int height})
       : super(
           format: ImageFormat.jpeg,
           width: width,

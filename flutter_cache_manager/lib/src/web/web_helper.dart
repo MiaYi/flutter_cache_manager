@@ -204,9 +204,8 @@ class WebHelper {
       }).pipe(sink);
       if (cacheObject.key.startsWith("img_")) {
         Uint8List bytes = await file.readAsBytes();
-        try {
-          ImageSizeData.fromBytes(bytes);
-        } catch (_) {
+        final isImageFile = ImageSizeData.isImage(bytes);
+        if (!isImageFile) {
           final str = utf8.decode(bytes);
           bytes = base64Decode(str);
         }
