@@ -1,10 +1,13 @@
 import 'dart:async';
 import 'dart:collection';
+import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:clock/clock.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
+import 'package:flutter_cache_manager/image_size_data.dart';
 import 'package:flutter_cache_manager/src/cache_store.dart';
 import 'package:flutter_cache_manager/src/storage/cache_object.dart';
 import 'package:flutter_cache_manager/src/web/queue_item.dart';
@@ -199,6 +202,15 @@ class WebHelper {
         receivedBytesResultController.add(receivedBytes);
         return s;
       }).pipe(sink);
+      if (cacheObject.key.startsWith("img_")) {
+        Uint8List bytes = await file.readAsBytes();
+        final isImageFile = ImageSizeData.isImage(bytes);
+        if (!isImageFile) {
+          final str = utf8.decode(bytes);
+          bytes = base64Decode(str);
+        }
+        await file.writeAsBytes(bytes);
+      }
     } catch (e, stacktrace) {
       receivedBytesResultController.addError(e, stacktrace);
     }

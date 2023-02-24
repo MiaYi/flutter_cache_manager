@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'dart:io';
+
 import 'package:clock/clock.dart';
 import 'package:http/http.dart' as http;
+
 import 'mime_converter.dart';
 
 ///Flutter Cache Manager
@@ -58,6 +60,8 @@ abstract class FileServiceResponse {
 
   /// Used to save the file on the storage, includes a dot. For example '.jpeg'
   String get fileExtension;
+
+  String? get contentType;
 }
 
 /// Basic implementation of a [FileServiceResponse] for http requests.
@@ -80,6 +84,9 @@ class HttpGetResponse implements FileServiceResponse {
 
   @override
   int? get contentLength => _response.contentLength;
+
+  @override
+  String? get contentType => _header(HttpHeaders.contentTypeHeader);
 
   @override
   DateTime get validTill {
