@@ -70,13 +70,16 @@ class CacheManager implements BaseCacheManager {
     String url, {
     String? key,
     Map<String, String>? headers,
+    Future<List<int>> Function(Uint8List)? fileHandler,
   }) async {
     key ??= url;
     final cacheFile = await getFileFromCache(key);
     if (cacheFile != null && cacheFile.validTill.isAfter(DateTime.now())) {
       return cacheFile.file;
     }
-    return (await downloadFile(url, key: key, authHeaders: headers)).file;
+    return (await downloadFile(url,
+            key: key, authHeaders: headers, fileHandler: fileHandler))
+        .file;
   }
 
   /// Get the file from the cache and/or online, depending on availability and age.
@@ -107,15 +110,20 @@ class CacheManager implements BaseCacheManager {
   /// might be outdated and a new file is being downloaded in the background.
   @override
   Stream<FileResponse> getFileStream(String url,
-      {String? key, Map<String, String>? headers, bool withProgress = false}) {
+      {String? key,
+      Map<String, String>? headers,
+      bool withProgress = false,
+      Future<List<int>> Function(Uint8List)? fileHandler}) {
     key ??= url;
     final streamController = StreamController<FileResponse>();
-    _pushFileToStream(streamController, url, key, headers, withProgress);
+    _pushFileToStream(streamController, url, key, headers, withProgress,
+        fileHandler: fileHandler);
     return streamController.stream;
   }
 
   Future<void> _pushFileToStream(StreamController streamController, String url,
-      String? key, Map<String, String>? headers, bool withProgress) async {
+      String? key, Map<String, String>? headers, bool withProgress,
+      {Future<List<int>> Function(Uint8List)? fileHandler}) async {
     key ??= url;
     FileInfo? cacheFile;
     try {
@@ -131,8 +139,8 @@ class CacheManager implements BaseCacheManager {
     }
     if (cacheFile == null || cacheFile.validTill.isBefore(DateTime.now())) {
       try {
-        await for (var response
-            in _webHelper.downloadFile(url, key: key, authHeaders: headers)) {
+        await for (var response in _webHelper.downloadFile(url,
+            key: key, authHeaders: headers, fileHandler: fileHandler)) {
           if (response is DownloadProgress && withProgress) {
             streamController.add(response);
           }
@@ -157,7 +165,8 @@ class CacheManager implements BaseCacheManager {
   Future<FileInfo> downloadFile(String url,
       {String? key,
       Map<String, String>? authHeaders,
-      bool force = false}) async {
+      bool force = false,
+      Future<List<int>> Function(Uint8List)? fileHandler}) async {
     key ??= url;
     var fileResponse = await _webHelper
         .downloadFile(
@@ -165,6 +174,7 @@ class CacheManager implements BaseCacheManager {
           key: key,
           authHeaders: authHeaders,
           ignoreMemCache: force,
+          fileHandler: fileHandler,
         )
         .firstWhere((r) => r is FileInfo);
     return fileResponse as FileInfo;
@@ -176,6 +186,23 @@ class CacheManager implements BaseCacheManager {
   Future<FileInfo?> getFileFromCache(String key,
           {bool ignoreMemCache = false}) =>
       _store.getFile(key, ignoreMemCache: ignoreMemCache);
+
+  @override
+  Future<List<FileInfo>?> getFilesWithKeyPrefixFromCache(String key,
+      {bool ignoreMemCache = false}) async {
+    final list = <FileInfo>[];
+    int index = 0;
+    while (true) {
+      final fileInfo = await _store.getFile("${key}\$$index",
+          ignoreMemCache: ignoreMemCache);
+      if (fileInfo != null) {
+        list.add(fileInfo);
+        index += 1;
+      } else {
+        return list.isEmpty ? null : list;
+      }
+    }
+  }
 
   ///Returns the file from memory if it has already been fetched
   @override

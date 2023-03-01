@@ -39,15 +39,24 @@ abstract class BaseCacheManager {
   /// returned from the cache there will be no progress given, although the file
   /// might be outdated and a new file is being downloaded in the background.
   Stream<FileResponse> getFileStream(String url,
-      {String? key, Map<String, String>? headers, bool withProgress});
+      {String? key,
+      Map<String, String>? headers,
+      bool withProgress,
+      Future<List<int>> Function(Uint8List)? fileHandler});
 
   ///Download the file and add to cache
   Future<FileInfo> downloadFile(String url,
-      {String? key, Map<String, String>? authHeaders, bool force = false});
+      {String? key,
+      Map<String, String>? authHeaders,
+      bool force = false,
+      Future<List<int>> Function(Uint8List)? fileHandler});
 
   /// Get the file from the cache.
   /// Specify [ignoreMemCache] to force a re-read from the database
   Future<FileInfo?> getFileFromCache(String key, {bool ignoreMemCache = false});
+
+  Future<List<FileInfo>?> getFilesWithKeyPrefixFromCache(String key,
+      {bool ignoreMemCache = false});
 
   ///Returns the file from memory if it has already been fetched
   Future<FileInfo?> getFileFromMemory(String key);

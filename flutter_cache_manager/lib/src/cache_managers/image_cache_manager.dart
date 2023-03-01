@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math';
+import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:file/file.dart';
@@ -26,11 +27,14 @@ mixin ImageCacheManager on BaseCacheManager {
     bool withProgress = false,
     int? maxHeight,
     int? maxWidth,
-    CustomDecoder? customDecoder,
+    Future<List<int>> Function(Uint8List)? fileHandler,
   }) async* {
     if (maxHeight == null && maxWidth == null) {
       yield* getFileStream(url,
-          key: key, headers: headers, withProgress: withProgress);
+          key: key,
+          headers: headers,
+          withProgress: withProgress,
+          fileHandler: fileHandler);
       return;
     }
     key ??= url;
@@ -57,7 +61,7 @@ mixin ImageCacheManager on BaseCacheManager {
         withProgress,
         maxWidth: maxWidth,
         maxHeight: maxHeight,
-        customDecoder: customDecoder,
+        fileHandler: fileHandler,
       ).asBroadcastStream();
       _runningResizes[resizedKey] = runningResize;
     }
@@ -72,16 +76,14 @@ mixin ImageCacheManager on BaseCacheManager {
     String key,
     int? maxWidth,
     int? maxHeight,
-    CustomDecoder? customDecoder,
   ) async {
     var originalFileName = originalFile.file.path;
     var fileExtension = originalFileName.split('.').last;
-    if (customDecoder == null && !supportedFileNames.contains(fileExtension)) {
+    if (!supportedFileNames.contains(fileExtension)) {
       return originalFile;
     }
 
-    var image =
-        await _decodeImage(originalFile.file, customDecoder: customDecoder);
+    var image = await _decodeImage(originalFile.file);
 
     var shouldResize = maxWidth != null
         ? image.width > maxWidth
@@ -99,10 +101,7 @@ mixin ImageCacheManager on BaseCacheManager {
     }
 
     var resized = await _decodeImage(originalFile.file,
-        customDecoder: customDecoder,
-        width: maxWidth,
-        height: maxHeight,
-        allowUpscaling: false);
+        width: maxWidth, height: maxHeight, allowUpscaling: false);
     var resizedFile =
         (await resized.toByteData(format: ui.ImageByteFormat.png))!
             .buffer
@@ -133,13 +132,14 @@ mixin ImageCacheManager on BaseCacheManager {
     bool withProgress, {
     int? maxWidth,
     int? maxHeight,
-    CustomDecoder? customDecoder,
+    Future<List<int>> Function(Uint8List)? fileHandler,
   }) async* {
     await for (var response in getFileStream(
       url,
       key: originalKey,
       headers: headers,
       withProgress: withProgress,
+      fileHandler: fileHandler,
     )) {
       if (response is DownloadProgress) {
         yield response;
@@ -150,7 +150,6 @@ mixin ImageCacheManager on BaseCacheManager {
           resizedKey,
           maxWidth,
           maxHeight,
-          customDecoder,
         );
       }
     }
@@ -158,13 +157,9 @@ mixin ImageCacheManager on BaseCacheManager {
 }
 
 Future<ui.Image> _decodeImage(File file,
-    {int? width,
-    int? height,
-    CustomDecoder? customDecoder,
-    bool allowUpscaling = false}) async {
+    {int? width, int? height, bool allowUpscaling = false}) async {
   var shouldResize = width != null || height != null;
-  var fileImage =
-      customDecoder != null ? await customDecoder(file) : FileImage(file);
+  var fileImage = FileImage(file);
   final image = shouldResize
       ? ResizeImage(fileImage,
           width: width, height: height, allowUpscaling: allowUpscaling)
