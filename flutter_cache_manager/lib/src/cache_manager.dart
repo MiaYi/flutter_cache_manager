@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:file/file.dart';
-import 'package:flutter/foundation.dart';
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:flutter_cache_manager/src/cache_store.dart';
 import 'package:flutter_cache_manager/src/storage/cache_object.dart';
@@ -121,8 +121,8 @@ class CacheManager implements BaseCacheManager {
     return streamController.stream;
   }
 
-  Future<void> _pushFileToStream(StreamController streamController, String url,
-      String? key, Map<String, String>? headers, bool withProgress,
+  Future<void> _pushFileToStream(StreamController<dynamic> streamController,
+      String url, String? key, Map<String, String>? headers, bool withProgress,
       {Future<List<int>> Function(Uint8List)? fileHandler}) async {
     key ??= url;
     FileInfo? cacheFile;
@@ -132,7 +132,7 @@ class CacheManager implements BaseCacheManager {
         streamController.add(cacheFile);
         withProgress = false;
       }
-    } catch (e) {
+    } on Object catch (e) {
       cacheLogger.log(
           'CacheManager: Failed to load cached file for $url with error:\n$e',
           CacheManagerLogLevel.debug);
@@ -148,7 +148,7 @@ class CacheManager implements BaseCacheManager {
             streamController.add(response);
           }
         }
-      } catch (e) {
+      } on Object catch (e) {
         cacheLogger.log(
             'CacheManager: Failed to download file from $url with error:\n$e',
             CacheManagerLogLevel.debug);
@@ -157,7 +157,7 @@ class CacheManager implements BaseCacheManager {
         }
       }
     }
-    unawaited(streamController.close());
+    streamController.close();
   }
 
   ///Download the file and add to cache
@@ -168,7 +168,7 @@ class CacheManager implements BaseCacheManager {
       bool force = false,
       Future<List<int>> Function(Uint8List)? fileHandler}) async {
     key ??= url;
-    var fileResponse = await _webHelper
+    final fileResponse = await _webHelper
         .downloadFile(
           url,
           key: key,
@@ -240,7 +240,7 @@ class CacheManager implements BaseCacheManager {
 
     final file = await _config.fileSystem.createFile(cacheObject.relativePath);
     await file.writeAsBytes(fileBytes);
-    unawaited(_store.putFile(cacheObject));
+    _store.putFile(cacheObject);
     return file;
   }
 
@@ -273,16 +273,16 @@ class CacheManager implements BaseCacheManager {
       eTag: eTag,
     );
 
-    var file = await _config.fileSystem.createFile(cacheObject.relativePath);
+    final file = await _config.fileSystem.createFile(cacheObject.relativePath);
 
     // Always copy file
-    var sink = file.openWrite();
+    final sink = file.openWrite();
     await source
         // this map is need to map UInt8List to List<int>
         .map((event) => event)
         .pipe(sink);
 
-    unawaited(_store.putFile(cacheObject));
+    _store.putFile(cacheObject);
     return file;
   }
 
